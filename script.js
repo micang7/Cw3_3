@@ -2,33 +2,44 @@ const input = document.querySelector("input");
 const form = document.querySelector("form");
 const div = document.querySelector("div");
 
-// const API_URL = process.env.VITE_API_URL;
-// const API_KEY = process.env.VITE_API_KEY;
+const API_URL = process.env.API_URL;
+const API_KEY = process.env.API_KEY;
 
-const API_URL = "https://api.giphy.com/v1/gifs/";
-const API_KEY = "ULM22IvnB3y0kJhT7ek6TcQ3oLLETtnW";
+const limit = 10;
+let offset;
+let search;
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  const search = input.value.trim();
-  if (search === "") return alert("Wpisz frazę do wyszukania");
-
+async function showPaginatedGifs() {
   showLoadingPopup("Pobieranie danych...");
-
   try {
     const resp = await fetch(
-      `${API_URL}search?api_key=${API_KEY}&q=${encodeURIComponent(search)}&limit=12`,
+      `${API_URL}search?api_key=${API_KEY}&q=${encodeURIComponent(search)}&limit=${limit + 1}&offset=${offset}`,
     );
     if (resp.ok) {
       const data = await resp.json();
       // console.log(data);
-      div.innerHTML = data.data.length === 0 ? "Brak wyników" : "";
-      data.data.forEach((gif) => {
-        div.innerHTML += `<img src="${gif.images.original.url}" alt="${gif.title}" style="display:block"/>`;
-      });
+      if (data.data.length === 0) {
+        div.innerHTML = "Brak wyników";
+      } else {
+        div.innerHTML = "";
+        data.data.slice(0, limit).forEach((gif) => {
+          div.innerHTML += `<img src="${gif.images.original.url}" alt="${gif.title}" width="200"/>`;
+        });
+        div.innerHTML += `<div>
+          <button id="prev" ${offset ? "" : "disabled"}>Poprzednia strona</button>
+          <button id="next" ${data.data.length > limit ? "" : "disabled"}>Następna strona</button>
+        </div>`;
+        document.getElementById("prev").addEventListener("click", () => {
+          offset = offset >= limit ? offset - limit : 0;
+          showPaginatedGifs();
+        });
+        document.getElementById("next").addEventListener("click", () => {
+          offset += limit;
+          showPaginatedGifs();
+        });
+      }
     } else if (resp.status === 404) {
-      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center">Brak wyników</td></tr>`;
+      div.innerHTML = "Brak wyników";
     } else {
       alert("Nie udało się pobrać danych z API.");
     }
@@ -37,6 +48,16 @@ form.addEventListener("submit", async (e) => {
   } finally {
     hideLoadingPopup();
   }
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  search = input.value.trim();
+  if (search === "") return alert("Wpisz frazę do wyszukania");
+
+  offset = 0;
+  showPaginatedGifs();
 });
 
 function showLoadingPopup(title) {
