@@ -1,20 +1,32 @@
-const button = document.querySelector("button");
+const input = document.querySelector("input");
+const form = document.querySelector("form");
 const div = document.querySelector("div");
 
-const API_URL = process.env.API_URL;
-const API_KEY = process.env.API_KEY;
+// const API_URL = process.env.VITE_API_URL;
+// const API_KEY = process.env.VITE_API_KEY;
 
-button.addEventListener("click", async (e) => {
+const API_URL = "https://api.giphy.com/v1/gifs/";
+const API_KEY = "ULM22IvnB3y0kJhT7ek6TcQ3oLLETtnW";
+
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  const search = input.value.trim();
+  if (search === "") return alert("Wpisz frazę do wyszukania");
 
   showLoadingPopup("Pobieranie danych...");
 
   try {
-    const resp = await fetch(`${API_URL}random?api_key=${API_KEY}`);
+    const resp = await fetch(
+      `${API_URL}search?api_key=${API_KEY}&q=${encodeURIComponent(search)}&limit=12`,
+    );
     if (resp.ok) {
       const data = await resp.json();
-      console.log(data);
-      div.innerHTML = `<img src="${data.data.images.original.url}" alt="random gif"/>`;
+      // console.log(data);
+      div.innerHTML = data.data.length === 0 ? "Brak wyników" : "";
+      data.data.forEach((gif) => {
+        div.innerHTML += `<img src="${gif.images.original.url}" alt="${gif.title}" style="display:block"/>`;
+      });
     } else if (resp.status === 404) {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center">Brak wyników</td></tr>`;
     } else {
